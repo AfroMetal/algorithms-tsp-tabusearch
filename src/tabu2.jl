@@ -32,11 +32,11 @@ pairwise!(d, dist, data)
 # show(d)
 
 ####### SETTINGS #######
-const itermax = Integer(floor((1_000_000*sqrt(n))/n^2))
+const itermax = Integer(floor((3_000_000*sqrt(n))/n^2))
 println(string("iterations: ", itermax))
-const penalty = 100
+const penalty = 10
 ########################
-tabulist = Array{Int32}(n)
+tabulist = fill(-penalty, n)
 
 frequencylist = zeros(Float64, n)
 frequencylist[1] = Inf
@@ -63,11 +63,24 @@ function distance(solution::Array{Int32})
     return cost
 end
 
+function distancediff(tour::Array{Int32}, j::Integer, k::Integer)
+    return sum([
+            -d[tour[j-1], tour[j]],
+            -d[tour[j], tour[j+1]],
+             d[tour[j-1], tour[k]],
+             d[tour[k], tour[j+1]],
+            -d[tour[k-1], tour[k]],
+            -d[tour[k], tour[k+1]],
+             d[tour[k-1], tour[j]],
+             d[tour[j], tour[k+1]]
+        ])
+end
+
 function minfreq(freq::Array{Float64})
     _, i = findmin(freq)
     freq[i] = Inf
     _, j = findmin(freq)
-    
+
     return (i, j)
 end
 #
@@ -90,34 +103,54 @@ for i in 2:length(currentsol)-1
     end
 end
 
-bestsol = copy(currentsol)
 currentcost = distance(currentsol)
+
+bestsol = copy(currentsol)
 bestcost = currentcost
+
+bestneighborsol = copy(currentsol)
+bestneighborcost = currentcost
 
 print("initial cost: ")
 println(bestcost)
+# print("initial route: ")
+# println(bestsol)
 println(string("initialization time: ", toq(), "s"))
 
 noimprov = 0
+checked = 0
+
+neighborscount = 0.5 * (length(currentsol)-3) * (length(currentsol)-2)
 
 for iter in 1:itermax
-    bestneighborsol = copy(currentsol)
-    bestneighborcost = distance(bestneighborsol)
+    neighborsol = copy(bestneighborsol)
+    neighborcost = bestneighborcost
 
-    neighborsol = copy(currentsol)
+    for j in shuffle(2:length(neighborsol)-2), k in shuffle(j+1:length(neighborsol)-1)
+        if k-j > 1 && !istabbed(j,k,iter)
+            # checked += 1
 
-    for j in 2:length(neighborsol)-2, k in j+1:length(neighborsol)-1
-        if j != k && !istabbed(j,k,iter)
+            currentcost += distancediff(currentsol, j, k)
+
             currentsol[k], currentsol[j] = currentsol[j], currentsol[k]
-            currentcost = distance(currentsol)
+
             frequencylist[currentsol[j]] += currentcost - bestcost
             frequencylist[currentsol[k]] += currentcost - bestcost
+
+            # TODO: tab every neighbor, not only ones checked
+            tab(j, k, iter)
+
             if currentcost < bestneighborcost
-                tab(j, k, iter)
                 bestneighborsol = copy(currentsol)
                 bestneighborcost = currentcost
             end
+
             currentsol = copy(neighborsol)
+            currentcost = neighborcost
+        end
+        if (checked+=1) >= neighborscount/10
+            checked = 0
+            break
         end
     end
 
@@ -126,15 +159,14 @@ for iter in 1:itermax
         bestcost = bestneighborcost
         noimprov = 0
     else
-        noimprov += 1
-        if noimprov >= itermax/20
+        if (noimprov+=1) >= itermax/10
             (freq1, freq2) = minfreq(frequencylist)
             tour1 = findfirst(bestneighborsol.==freq1)
             tour2 = findfirst(bestneighborsol.==freq2)
 
+            # bestneighborcost += distancediff(bestneighborsol, tour1, tour2)
             bestneighborsol[tour1], bestneighborsol[tour2] = bestneighborsol[tour2], bestneighborsol[tour1]
             bestneighborcost = distance(bestneighborsol)
-
 
             frequencylist = zeros(Float64, n)
             frequencylist[1] = Inf
@@ -143,8 +175,9 @@ for iter in 1:itermax
 
             noimprov = 0
 
+            tab(tour1, tour2, iter)
+
             if bestneighborcost < bestcost
-                tab(tour1, tour2, iter)
                 bestsol = copy(bestneighborsol)
                 bestcost = bestneighborcost
             end
