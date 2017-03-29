@@ -88,16 +88,16 @@ function istabbed(i::Integer, j::Integer, iteration::Integer)
 end
 
 function isaspiring(i::Integer, j::Integer, current::Float64, base::Float64, iteration::Integer)
-    return base > current + current*(iteration - max(tabulist[i], tabulist[j]))/penalty
+    return base > current + 0.5(penalty-(iteration-max(tabulist[i], tabulist[j])))
 end
 
 ####### SETTINGS #######
-const itermax = Integer(floor((10_000_000*sqrt(n))/n^2))
+const itermax = round(Int32, 1.0e10*round(sqrt(n))/n^2)
 println(string("max iterations:\t", itermax))
 
-const penalty = round(sqrt(n)) # rounds tabbed
+const penalty = round(Int32, sqrt(n)) # rounds tabbed
 
-const neighborstocheck = sqrt(neighborscount)
+const neighborstocheck = round(Int32, sqrt(neighborscount) * 0.2)
 ########################
 
 tabulist = fill(-penalty, n)
@@ -119,6 +119,7 @@ for iter in 1:itermax
     for (j, k) in shuffle(N)
         c1 = neighborsol[j]
         c2 = neighborsol[k]
+
         if checks < maxchecks
             currentcost = neighborcost + sum([
                     -d[neighborsol[j-1], neighborsol[j]],
@@ -130,26 +131,25 @@ for iter in 1:itermax
                      d[neighborsol[k-1], neighborsol[j]],
                      d[neighborsol[j], neighborsol[k+1]]
                 ])
-            if !istabbed(c1, c2, iter) || isaspiring(c1, c2, currentcost, neighborcost, iter)
-                # println(currentcost)
 
+            if !istabbed(c1, c2, iter) || isaspiring(c1, c2, currentcost, neighborcost, iter)
                 if currentcost <= bestneighborcost
                     city1 = j
                     city2 = k
                     bestneighborcost = currentcost
                 end
+
                 checks += 1
             end
         elseif city1 == 0 || city2 == 0
-            maxchecks *= 2
+            maxchecks += neighborstocheck
         end
 
         tabulist[c1] = iter
         tabulist[c2] = iter
-        # tab(neighborsol[j], neighborsol[k], iter)
     end
 
-    if city1 != 0 && city2 != 0
+    if city1 > 0 && city2 > 0
         bestneighborsol = copy(neighborsol)
         bestneighborsol[city2], bestneighborsol[city1] = bestneighborsol[city1], bestneighborsol[city2]
     else
