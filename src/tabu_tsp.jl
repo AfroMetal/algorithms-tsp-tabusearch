@@ -97,7 +97,7 @@ best_nbr = copy(crnt_tour)
 best_i = 0
 best_j = 0
 
-for iter in 1:Integer(round(300_000*sqrt(n)/n^2))
+for iter in 1:Integer(floor((10_000_000*sqrt(n))/n^2))
     # @printf("Iteration %d\n", iter)
     if crnt_tour_cost < 0
         @printf("ERROR! crnt_tour_cost < 0\n")
@@ -229,11 +229,13 @@ for iter in 1:Integer(round(300_000*sqrt(n)/n^2))
     # @printf("current tour cost = %d\t", crnt_tour_cost)
     # @printf("best obj = %d\n", best_obj)
 end
-println(STDOUT, best_obj)
-for n in best_tour
-    print(STDERR, n)
-    print(STDERR, " ")
-end
-println(STDERR)
+# println(STDOUT, best_obj)
+# for n in best_tour
+#     print(STDERR, n)
+#     print(STDERR, " ")
+# end
+# println(STDERR)
 
+
+println(STDOUT, string("best cost: ", best_obj))
 println(string("total time: ", toq(), "s"))
