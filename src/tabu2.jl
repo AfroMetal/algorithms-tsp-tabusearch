@@ -1,4 +1,6 @@
+include("libs/Distances/src/Distances.jl")
 using Distances
+
 dist = Euclidean()
 
 tic()
@@ -32,14 +34,13 @@ pairwise!(d, dist, data)
 # show(d)
 
 ####### SETTINGS #######
-const itermax = Integer(floor((3_000_000*sqrt(n))/n^2))
+const itermax = Integer(floor((10_000_000*sqrt(n))/n^2))
 println(string("iterations: ", itermax))
-const penalty = 10
+const penalty = 10 # rounds tabbed
+const checkpercent = 1.0 # * sqrt(neighborscount)
+const noimprovpercent = 0.1 # * itermax
 ########################
 tabulist = fill(-penalty, n)
-
-frequencylist = zeros(Float64, n)
-frequencylist[1] = Inf
 
 currentsol = Array{Int32}(n+1)
 currentsol[1] = currentsol[n+1] = Int32(1)
@@ -76,13 +77,6 @@ function distancediff(tour::Array{Int32}, j::Integer, k::Integer)
         ])
 end
 
-function minfreq(freq::Array{Float64})
-    _, i = findmin(freq)
-    freq[i] = Inf
-    _, j = findmin(freq)
-
-    return (i, j)
-end
 #
 # for i in 2:n
 #     currentsol[i] = Int32(i)
@@ -111,84 +105,66 @@ bestcost = currentcost
 bestneighborsol = copy(currentsol)
 bestneighborcost = currentcost
 
-print("initial cost: ")
-println(bestcost)
-# print("initial route: ")
-# println(bestsol)
-println(string("initialization time: ", toq(), "s"))
+neighborsol = copy(bestneighborsol)
+neighborcost = bestneighborcost
 
 noimprov = 0
 checked = 0
 
 neighborscount = 0.5 * (length(currentsol)-3) * (length(currentsol)-2)
 
+println(string("initial cost: ", bestcost))
+# println(string("initial route: ", bestsol))
+println(string("initialization time: ", toq(), "s"))
+
 for iter in 1:itermax
     neighborsol = copy(bestneighborsol)
     neighborcost = bestneighborcost
 
     for j in shuffle(2:length(neighborsol)-2), k in shuffle(j+1:length(neighborsol)-1)
-        if k-j > 1 && !istabbed(j,k,iter)
-            # checked += 1
+    # for j in 2:length(neighborsol)-2, k in j+1:length(neighborsol)-1
+        if k-j>1 && !istabbed(j,k,iter)
+            currentsol = copy(neighborsol)
+            currentcost = neighborcost
 
             currentcost += distancediff(currentsol, j, k)
 
             currentsol[k], currentsol[j] = currentsol[j], currentsol[k]
 
-            frequencylist[currentsol[j]] += currentcost - bestcost
-            frequencylist[currentsol[k]] += currentcost - bestcost
-
             # TODO: tab every neighbor, not only ones checked
             tab(j, k, iter)
 
-            if currentcost < bestneighborcost
+            if currentcost <= bestneighborcost
                 bestneighborsol = copy(currentsol)
                 bestneighborcost = currentcost
             end
 
-            currentsol = copy(neighborsol)
-            currentcost = neighborcost
+            checked+=1
         end
-        if (checked+=1) >= neighborscount/10
+        if checked >= sqrt(neighborscount) * checkpercent
             checked = 0
             break
+        end
+    end
+
+    for j in 2:length(neighborsol)-2, k in j+1:length(neighborsol)-1
+        if k-j>1
+            tab(j, k, iter)
         end
     end
 
     if bestneighborcost < bestcost
         bestsol = copy(bestneighborsol)
         bestcost = bestneighborcost
-        noimprov = 0
-    else
-        if (noimprov+=1) >= itermax/10
-            (freq1, freq2) = minfreq(frequencylist)
-            tour1 = findfirst(bestneighborsol.==freq1)
-            tour2 = findfirst(bestneighborsol.==freq2)
-
-            # bestneighborcost += distancediff(bestneighborsol, tour1, tour2)
-            bestneighborsol[tour1], bestneighborsol[tour2] = bestneighborsol[tour2], bestneighborsol[tour1]
-            bestneighborcost = distance(bestneighborsol)
-
-            frequencylist = zeros(Float64, n)
-            frequencylist[1] = Inf
-            frequencylist[bestneighborsol[tour1]] += bestneighborcost - bestcost
-            frequencylist[bestneighborsol[tour2]] += bestneighborcost - bestcost
-
-            noimprov = 0
-
-            tab(tour1, tour2, iter)
-
-            if bestneighborcost < bestcost
-                bestsol = copy(bestneighborsol)
-                bestcost = bestneighborcost
-            end
-        end
     end
 end
-println(STDOUT, bestcost)
+
+# println(STDOUT, bestcost)
 # for n in bestsol
 #     print(STDERR, n)
 #     print(STDERR, " ")
 # end
 # println(STDERR)
 
+println(STDOUT, string("best cost: ", bestcost))
 println(string("total time: ", toq(), "s"))
