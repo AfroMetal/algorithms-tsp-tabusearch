@@ -1,2 +1,2 @@
 #!/bin/bash
-julia tabu3.jl
+julia tabu3.jl 0
