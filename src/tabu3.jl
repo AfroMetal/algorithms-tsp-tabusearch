@@ -87,22 +87,22 @@ function istabbed(i::Integer, j::Integer, iteration::Integer)
     return (iteration - tabulist[i]) < penalty || (iteration - tabulist[j]) < penalty
 end
 
-function isaspiring(i::Integer, j::Integer, current::Float64, base::Float64, iteration::Integer)
-    return base > current + 0.5(penalty-(iteration-max(tabulist[i], tabulist[j])))
+function isaspiring(i::Integer, j::Integer, current::Float64, base::Float64, itr::Integer)
+    return base > current + 0.7(penalty-(itr-min(tabulist[i], tabulist[j])))
 end
 
 ####### SETTINGS #######
-const itermax = round(Int32, 1.0e10*round(sqrt(n))/n^2)
-println(string("max iterations:\t", itermax))
+const itermax = round(Int32, 1.0e8*round(sqrt(n))/n^2)
 
 const penalty = round(Int32, sqrt(n)) # rounds tabbed
 
-const neighborstocheck = round(Int32, sqrt(neighborscount) * 0.2)
+const neighborstocheck = round(Int32, sqrt(neighborscount) * 0.1)
 ########################
 
 tabulist = fill(-penalty, n)
 checks = 0
 
+println(string("max iterations:\t", itermax))
 println(string("initial cost:\t", bestcost))
 # println(string("initial route: ", bestsol))
 println(string("initial time:\t", toq(), "s"))
@@ -113,12 +113,12 @@ for iter in 1:itermax
 
     checks = 0
     maxchecks = neighborstocheck
-    city1 = 0
-    city2 = 0
+    index1 = 0
+    index2 = 0
 
     for (j, k) in shuffle(N)
-        c1 = neighborsol[j]
-        c2 = neighborsol[k]
+        city1 = neighborsol[j]
+        city2 = neighborsol[k]
 
         if checks < maxchecks
             currentcost = neighborcost + sum([
@@ -132,33 +132,34 @@ for iter in 1:itermax
                      d[neighborsol[j], neighborsol[k+1]]
                 ])
 
-            if !istabbed(c1, c2, iter) || isaspiring(c1, c2, currentcost, neighborcost, iter)
-                if currentcost <= bestneighborcost
-                    city1 = j
-                    city2 = k
+            if !istabbed(city1, city2, iter) || isaspiring(city1, city2, currentcost, neighborcost, iter)
+                if currentcost <= bestneighborcost || index1 == 0
+                    index1 = j
+                    index2 = k
                     bestneighborcost = currentcost
                 end
-
                 checks += 1
             end
-        elseif city1 == 0 || city2 == 0
+        end
+
+        if checks >= maxchecks && index1 == 0
             maxchecks += neighborstocheck
         end
 
-        tabulist[c1] = iter
-        tabulist[c2] = iter
+        tabulist[city1] = iter
+        tabulist[city2] = iter
     end
 
-    if city1 > 0 && city2 > 0
+    if index1 != 0 && index2 != 0
         bestneighborsol = copy(neighborsol)
-        bestneighborsol[city2], bestneighborsol[city1] = bestneighborsol[city1], bestneighborsol[city2]
+        bestneighborsol[index2], bestneighborsol[index1] = bestneighborsol[index1], bestneighborsol[index2]
+
+        if bestneighborcost <= bestcost
+            bestsol = copy(bestneighborsol)
+            bestcost = bestneighborcost
+        end
     else
         break
-    end
-
-    if bestneighborcost <= bestcost
-        bestsol = copy(bestneighborsol)
-        bestcost = bestneighborcost
     end
 end
 
