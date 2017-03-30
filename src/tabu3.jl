@@ -2,6 +2,8 @@ using Distances, StatsBase
 
 dist = Euclidean()
 
+const DEBUG = ARGS[1] == "1"
+
 tic()
 tic()
 # file lines iterator object
@@ -102,10 +104,12 @@ const neighborstocheck = round(Int32, sqrt(neighborscount) * 0.1)
 tabulist = fill(-penalty, n)
 checks = 0
 
-println(string("max iterations:\t", itermax))
-println(string("initial cost:\t", bestcost))
-# println(string("initial route: ", bestsol))
-println(string("initial time:\t", toq(), "s"))
+if DEBUG
+    println(string("max iterations:\t", itermax))
+    println(string("initial cost:\t", bestcost))
+    # println(string("initial route: ", bestsol))
+    println(string("initial time:\t", toq(), "s"))
+end
 
 for iter in 1:itermax
     neighborsol = copy(bestneighborsol)
@@ -163,12 +167,14 @@ for iter in 1:itermax
     end
 end
 
-# println(STDOUT, bestcost)
-# for n in bestsol
-#     print(STDERR, n)
-#     print(STDERR, " ")
-# end
-# println(STDERR)
-
-println(STDOUT, string("best cost:\t", bestcost))
-println(string("total time:\t", toq(), "s"))
+if DEBUG
+    println(STDOUT, string("best cost:\t", bestcost))
+    println(string("total time:\t", toq(), "s"))
+else
+    println(STDOUT, bestcost)
+    for n in bestsol
+        print(STDERR, n)
+        print(STDERR, " ")
+    end
+    println(STDERR)
+end
