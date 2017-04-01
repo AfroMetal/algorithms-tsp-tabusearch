@@ -138,10 +138,12 @@ for iter in 1:itermax
 
             if !istabbed(city1, city2, iter) || isaspiring(city1, city2, currentcost, neighborcost, iter)
                 if currentcost <= bestneighborcost || index1 == 0
+                    if index1 != 0
+                        maxchecks = min(maxchecks, checks+0.05neighborstocheck)
+                    end
                     index1 = j
                     index2 = k
                     bestneighborcost = currentcost
-                    maxchecks = min(maxchecks, checks+0.05neighborstocheck)
                 end
                 checks += 1
             end
