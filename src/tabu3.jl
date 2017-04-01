@@ -2,7 +2,7 @@ using Distances, StatsBase
 
 dist = Euclidean()
 
-const DEBUG = ARGS[1] == "1"
+const DEBUG = length(ARGS) >=1 && ARGS[1] == "1"
 
 tic()
 tic()
@@ -141,6 +141,7 @@ for iter in 1:itermax
                     index1 = j
                     index2 = k
                     bestneighborcost = currentcost
+                    maxchecks = min(maxchecks, checks+0.05neighborstocheck)
                 end
                 checks += 1
             end
