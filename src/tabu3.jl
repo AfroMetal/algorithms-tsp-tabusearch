@@ -10,6 +10,11 @@ function distance(solution::Array{Int32})
     return cost
 end
 
+function tab(i::Integer, j::Integer, iteration::Integer)
+    tabulist[i] = iteration
+    tabulist[j] = iteration
+end
+
 function istabbed(i::Integer, j::Integer, iteration::Integer)
     return (iteration - tabulist[i]) < penalty || (iteration - tabulist[j]) < penalty
 end
@@ -74,11 +79,11 @@ N = [(j, k) for j=2:length(bestsol)-2 for k=j+1:length(bestsol)-1 if k-j>1]
 neighborscount = length(N)
 
 ####### SETTINGS #######
-const itermax = round(Int32, 1.0e8*round(sqrt(n))/n^2)
+const itermax = round(Int32, 1.0e7*round(sqrt(n))/n^2)
 
-const penalty = 3*round(Int32, sqrt(n)) # rounds tabbed
+const neighborstocheck = round(Int32, sqrt(neighborscount)/log(100, n))
 
-const neighborstocheck = round(Int32, sqrt(neighborscount)*0.7)
+const penalty = round(Int32, 0.7sqrt(n)) # rounds tabbed
 ########################
 
 tabulist = fill(-penalty, n)
@@ -87,9 +92,9 @@ checks = 0
 if DEBUG
     println(string("max iterations:\t", itermax))
     println(string("initial cost:\t", bestcost))
-    for n in bestsol
-        println(STDERR, n)
-    end
+    # for n in bestsol
+    #     println(STDERR, n)
+    # end
     println(string("initial time:\t", toq(), "s"))
 end
 
@@ -107,33 +112,22 @@ for iter in 1:itermax
         city2 = neighborsol[k]
 
         if checks < maxchecks
-            currentcost = neighborcost + sum([
-                    -d[neighborsol[j-1], neighborsol[j]],
-                    -d[neighborsol[j], neighborsol[j+1]],
-                     d[neighborsol[j-1], neighborsol[k]],
-                     d[neighborsol[k], neighborsol[j+1]],
-                    -d[neighborsol[k-1], neighborsol[k]],
-                    -d[neighborsol[k], neighborsol[k+1]],
-                     d[neighborsol[k-1], neighborsol[j]],
-                     d[neighborsol[j], neighborsol[k+1]]
-                ])
+            currentcost = neighborcost - d[neighborsol[j-1], neighborsol[j]] - d[neighborsol[j], neighborsol[j+1]] + d[neighborsol[j-1], neighborsol[k]] + d[neighborsol[k], neighborsol[j+1]] - d[neighborsol[k-1], neighborsol[k]] - d[neighborsol[k], neighborsol[k+1]] + d[neighborsol[k-1], neighborsol[j]] + d[neighborsol[j], neighborsol[k+1]]
 
             if !istabbed(city1, city2, iter) || isaspiring(city1, city2, currentcost, neighborcost, iter)
                 if currentcost <= bestneighborcost || index1 == 0
                     index1 = j
                     index2 = k
                     bestneighborcost = currentcost
-                    if currentcost <= bestcost
-                        maxchecks = min(maxchecks, checks+0.02neighborstocheck)
-                        # break
+                    if currentcost < bestcost
+                        # maxchecks = min(maxchecks, checks+0.01neighborstocheck)
+                        break
                     end
                 end
                 checks += 1
             end
         end
-
-        tabulist[city1] = iter
-        tabulist[city2] = iter
+        tab(city1, city2, iter)
     end
 
     if index1 != 0 && index2 != 0
@@ -155,8 +149,8 @@ if DEBUG
 else
     println(STDOUT, bestcost)
     for n in bestsol
-        println(STDERR, n)
-        # print(STDERR, " ")
+        print(STDERR, n)
+        print(STDERR, " ")
     end
-    # println(STDERR)
+    println(STDERR)
 end
