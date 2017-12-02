@@ -1,4 +1,4 @@
-using Distances, StatsBase
+using Distances
 
 const DEBUG = length(ARGS) >=1 && ARGS[1] == "1"
 
@@ -34,7 +34,6 @@ state = start(input)
 n = parse(Int32, n)
 
 # 2xN node's coordinates matrix
-# Data[:, k] = [x_k, y_k]
 data = Array{Float64}(2, n)
 
 # read file data to Data matrix
